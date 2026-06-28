@@ -13,7 +13,7 @@ class RecordBatch(val schema: Schema, val fields: List[ColumnVector]) extends Au
     def toCSV(): String =
         val sb = StringBuilder()
         val columnCount = schema.fields.size
-        for rowIndex <- 0 until rowCount do
+        for rowIndex <- 0 until rowCount() do
             for columnIndex <- 0 until columnCount do
                 if columnIndex > 0 then
                     sb.append(",")

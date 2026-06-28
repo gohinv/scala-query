@@ -21,5 +21,5 @@ case class Schema(fields: List[Field]):
 
 case class Field(name: String, dataType: ArrowType, nullable: Boolean):
     def toArrow(): ArrowField =
-        val fieldType = ArrowFieldType(nullable, dataType, None)
-        ArrowField(name, fieldType, Nil)
+        val fieldType = ArrowFieldType(nullable, dataType, null)
+        ArrowField(name, fieldType, List.empty[ArrowField].asJava)
