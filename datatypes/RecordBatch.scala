@@ -3,6 +3,7 @@ package datatypes
 import scala.collection.mutable.StringBuilder
 import scala.compiletime.ops.double
 
+/* Batch of data grouped into columns */
 class RecordBatch(val schema: Schema, val fields: List[ColumnVector]) extends AutoCloseable:
     def rowCount(): Int = fields.head.size()
 

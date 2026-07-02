@@ -12,9 +12,9 @@ trait ColumnVector extends AutoCloseable:
     def getValue(i: Int): Any
     def size(): Int
 
-class ArrowFieldVector(val field: FieldVector) extends ColumnVector:
+class ArrowFieldVector(val fv: FieldVector) extends ColumnVector:
     override def getType(): ArrowType = 
-        field match {
+        fv match {
             case _: BitVector => ArrowTypes.BooleanType
             case _: TinyIntVector => ArrowTypes.Int8Type
             case _: SmallIntVector => ArrowTypes.Int16Type
@@ -25,15 +25,15 @@ class ArrowFieldVector(val field: FieldVector) extends ColumnVector:
             case _: VarCharVector => ArrowTypes.StringType
             case _: VarBinaryVector => ArrowTypes.BinaryType
             case _: DateDayVector => ArrowTypes.DateDayType
-            case _: DecimalVector => field.getField.getType
-            case _: Decimal256Vector => field.getField.getType
+            case _: DecimalVector => fv.getField.getType
+            case _: Decimal256Vector => fv.getField.getType
             case other => throw new IllegalStateException(s"Unsupported field type: ${other.getClass.getName}")
         }
     override def getValue(i: Int): Any = 
 
-        if (field.isNull(i)) return null
+        if (fv.isNull(i)) return null
 
-        field match {
+        fv match {
             case bv: BitVector => (bv.get(i) == 1)
             case tv: TinyIntVector => tv.get(i)
             case si: SmallIntVector => si.get(i)
@@ -55,9 +55,9 @@ class ArrowFieldVector(val field: FieldVector) extends ColumnVector:
             case other => throw new IllegalStateException(s"Unsupported field type: ${other.getClass.getName}")
         }
 
-    override def size(): Int = field.getValueCount()
+    override def size(): Int = fv.getValueCount()
 
-    override def close(): Unit = field.close()
+    override def close(): Unit = fv.close()
 
 
 
