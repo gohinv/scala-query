@@ -2,6 +2,7 @@ package datatypes
 
 import java.math.BigDecimal
 import org.apache.arrow.vector.* 
+import java.nio.charset.StandardCharsets
 
 class ArrowVectorBuilder(val fieldVector: FieldVector):
     
@@ -11,7 +12,7 @@ class ArrowVectorBuilder(val fieldVector: FieldVector):
                 if value == null then
                     vcv.setNull(i)
                 else if value.isInstanceOf[Array[Byte]] then
-                    vcv.set(i, value)
+                    vcv.set(i, value.asInstanceOf[Array[Byte]])
                 else
                     vcv.set(i, value.toString.getBytes(StandardCharsets.UTF_8))
             case tv: TinyIntVector =>
