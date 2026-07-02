@@ -23,12 +23,12 @@ import org.apache.parquet.hadoop.util.HadoopInputFile
 import org.apache.parquet.io.ColumnIOFactory
 import org.apache.parquet.schema.PrimitiveType
 import scala.annotation.meta.field
-import javax.lang.model.`type`.PrimitiveType
+import scala.jdk.CollectionConverters.*
 
 class ParquetDataSource(val filename: String) extends DataSource:
     override def schema(): Schema =
        val scan = ParquetScan(filename, List.empty)
-       val arrowSchema = ParquetSchemaConverter.fromParquet(scan.schema).getArrowSchema
+       val arrowSchema = new ParquetSchemaConverter().fromParquet(scan.schema).getArrowSchema
        datatypes.SchemaConverter.fromArrow(arrowSchema)
     override def scan(projection: List[String]): Iterable[RecordBatch] =
         ParquetScan(filename, projection)
@@ -42,11 +42,11 @@ class ParquetScan(val filename: String, columns: List[String]) extends AutoClose
 
 class ParquetIterator(reader: ParquetFileReader, projectedColumns: List[String]) extends Iterator[RecordBatch]:
     val parquetSchema = reader.getFooter.getFileMetaData.getSchema
-    val arrowSchema = ParquetSchemaConverter.fromParquet(parquetSchema).getArrowSchema
+    val arrowSchema = new ParquetSchemaConverter().fromParquet(parquetSchema).getArrowSchema
     val projectedArrowSchema = ArrowSchema(
-        projectedColumns.map(colName => arrowSchema.getFields.find(f => 
+        projectedColumns.map(colName => arrowSchema.getFields.asScala.find(f => 
             f.getName == colName).getOrElse(throw new IllegalArgumentException(s"Column not found: $colName"))
-        )
+        ).asJava
     )
     var batch: Option[RecordBatch] = None
 
@@ -70,16 +70,16 @@ class ParquetIterator(reader: ParquetFileReader, projectedColumns: List[String])
         val root = VectorSchemaRoot.create(projectedArrowSchema, ArrowAllocator.rootAllocator)
         root.allocateNew()
         root.setRowCount(rowCnt)
-        val columnIO = ColumnIOFactory.getColumnIO(parquetSchema)
+        val columnIO = new ColumnIOFactory().getColumnIO(parquetSchema)
         val recordReader = columnIO.getRecordReader(pages, GroupRecordConverter(parquetSchema))
         for rowIdx <- 0 until rowCnt do
             val group: Group = recordReader.read()
             for projectionIdx <- 0 until projectedColumns.size do
                 val fieldName = projectedColumns(projectionIdx)
-                val fieldType = parquetSchema.getType(fieldName)
-                val vector = root.getFieldVectors(projectionIdx)
+                val fieldType = parquetSchema.getType(parquetSchema.getFieldIndex(fieldName))
+                val vector = root.getFieldVectors.get(projectionIdx)
                     if group.getFieldRepetitionCount(fieldName) == 1 then
-                        fieldType.asPrimitiveType.primitiveTypeName match {
+                        fieldType.asPrimitiveType().getPrimitiveTypeName() match {
                             case PrimitiveType.PrimitiveTypeName.BOOLEAN =>
                                 vector.asInstanceOf[BitVector].set(rowIdx, if group.getBoolean(fieldName, 0) then 1 else 0)
                             case PrimitiveType.PrimitiveTypeName.INT32 =>
@@ -99,7 +99,7 @@ class ParquetIterator(reader: ParquetFileReader, projectedColumns: List[String])
                             case PrimitiveType.PrimitiveTypeName.DOUBLE =>
                                 vector.asInstanceOf[Float8Vector].set(rowIdx, group.getDouble(fieldName, 0))
                             case PrimitiveType.PrimitiveTypeName.BINARY =>
-                                vector.asInstanceOf[VarBinaryVector].set(rowIdx, group.getBinary(fieldName, 0))
+                                vector.asInstanceOf[VarBinaryVector].set(rowIdx, group.getBinary(fieldName, 0).getBytes)
                             case PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY =>
                                 val bytes = group.getBinary(fieldName, 0).getBytes
                                 vector match {
@@ -110,7 +110,7 @@ class ParquetIterator(reader: ParquetFileReader, projectedColumns: List[String])
                             case PrimitiveType.PrimitiveTypeName.INT96 =>
                                 val bytes = group.getInt96(fieldName, 0).getBytes
                                 vector.asInstanceOf[VarBinaryVector].setSafe(rowIdx, bytes)
-                            case _ => throw new IllegalStateException(s"Unsupported primitive type: ${fieldType.asPrimitiveType.primitiveTypeName}")
+                            case _ => throw new IllegalStateException(s"Unsupported primitive type: ${fieldType.asPrimitiveType().getPrimitiveTypeName()}")
                         }
         val schema = datatypes.SchemaConverter.fromArrow(projectedArrowSchema)
-        RecordBatch(schema, root.getFieldVectors.map(ArrowFieldVector(_)))
+        RecordBatch(schema, root.getFieldVectors.asScala.map(ArrowFieldVector(_)).toList)
