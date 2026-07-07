@@ -160,7 +160,7 @@ class Or(left: LogicalExpr, right: LogicalExpr) extends BooleanBinaryExpr("or", 
 /* Convenience methods with infix operators */
 
 extension (lhs: LogicalExpr)
-  infix def eq(rhs: LogicalExpr): LogicalExpr = Eq(lhs, rhs)
+  infix def ===(rhs: LogicalExpr): LogicalExpr = Eq(lhs, rhs)
   infix def neq(rhs: LogicalExpr): LogicalExpr = Neq(lhs, rhs)
   infix def gt(rhs: LogicalExpr): LogicalExpr = Gt(lhs, rhs)
   infix def gteq(rhs: LogicalExpr): LogicalExpr = GtEq(lhs, rhs)
@@ -209,6 +209,8 @@ class Alias(val expr: LogicalExpr, val alias: String) extends LogicalExpr:
     
 extension (expr: LogicalExpr)
     infix def alias(alias: String): Alias = Alias(expr, alias)
+
+/* AGGREGATE EXPRESSIONS */
 
 /* Base class for aggregate expresions */
 
