@@ -15,7 +15,7 @@ object SchemaConverter:
         }.toList
         Schema(fields)
 
-case class Schema(fields: List[Field]):
+case class Schema(val fields: List[Field]):
     def toArrow(): ArrowSchema =
         val arrowFields = this.fields.map(_.toArrow()).asJava
         ArrowSchema(arrowFields)
