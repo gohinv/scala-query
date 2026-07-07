@@ -19,16 +19,12 @@ First step after parsing a query is building a logical plan, which is a tree str
 - scan has no children (reads from data source), filter has 1 child (input expression), join has 2 children (left and right)
 - children() enables walking plan tree
 
-
-
 ## Logical Expressions
 
 - Logical plan = data flow between operators
 - Expression = individual computation / operator / value
 - Examples: column reference, literal value, math expression, comparison, boolean, aggregation, etc
 - Nested expressions form trees
-
-
 
 ### LogicalExpr Interface
 
@@ -48,13 +44,9 @@ First step after parsing a query is building a logical plan, which is a tree str
 - Simplest expression: just reference a column by name
 - `toField()`: just look up column name in input logical plan schema to ensure existence
 
-
-
 ### Literal Expression
 
 - Represent literal value
-
-
 
 ### Binary Expressions
 
@@ -62,60 +54,42 @@ First step after parsing a query is building a logical plan, which is a tree str
 - Comparison and logical expressions always produce boolean results
 - Math expressions: preserve data type of left operand (simplified, we could handle promotion)
 
-
-
 ### Aggregate expressions
 
 - Reduce multiple rows to one value (`SUM`, `MIN`, `MAX`, `AVG`, `COUNT`)
 - Most aggregates return same type as their input expression 
 - `COUNT` different, always returns integer count of rows
 
-
-
 ### Aliased Expressions
 
 - SQL `AS` keyword: `expr AS alias`
 - basically just changes the name of input but preserves type
 
-
-
 ## Logical Plan Subclasses
-
-
 
 ### Scan
 
 - Leaf node in a query tree: read from data source; place where data enters a plan
 - `projection` parameter selects columns
 
-
-
 ### Selection (Filter)
 
 - Keep only rows where expression evaluates to true (SQL `WHERE` clause)
 - Schema passes unchanged
-
-
 
 ### Projection
 
 - Compute new columns from expression (SQL `SELECT c1, c2, ...`)
 - Output schema is thus the selected subset of the input schema
 
-
-
 ### Aggregate
 
 - Group by rows and compute aggregate functions (SQL `GROUP BY`)
-
-
 
 ### Join
 
 - Combine rows from two inputs based on join keys
 - `on` param specifies pairs of column names to join on
-
-
 
 ### Putting It Together
 
@@ -156,3 +130,15 @@ Projection: #name, #salary * 1.1 as new_salary
     Scan: employees; projection=None
 ```
 
+# DataFrame API
+
+- The method of building a logical plan shown above is verbose. We have to construct each piece separately and wire them together.
+- Slight improvement by nesting the constructors.
+
+### DataFrame Approach
+
+DataFrame Interface: [DataFrame.scala](DataFrame.scala)
+
+- A dataframe wraps a logical plan and provides transformation methods that return new logical plans
+- Each method call adds a node to the plan
+- Result: fluent API where code reads top-to-bottom in execution order
